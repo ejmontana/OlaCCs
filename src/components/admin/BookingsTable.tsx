@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2, Edit, Search, ChevronDown } from 'lucide-react';
+import { Trash2, Search, ChevronDown, DollarSign } from 'lucide-react';
 
 interface Booking {
   id: string;
@@ -12,6 +12,15 @@ interface Booking {
     serviceId: string;
     therapistId: string;
   }[];
+  payment: {
+    method: 'card' | 'transfer' | 'cash';
+    status: 'pending' | 'partial' | 'completed';
+    depositAmount: number;
+    remainingAmount: number;
+    totalAmount: number;
+    transactionId?: string;
+    date: string;
+  };
 }
 
 const serviceNames: { [key: string]: string } = {
@@ -25,6 +34,24 @@ const therapistNames: { [key: string]: string } = {
   maria: 'María González',
   ana: 'Ana Martínez',
   carmen: 'Carmen Silva'
+};
+
+const paymentMethodNames: { [key: string]: string } = {
+  card: 'Tarjeta',
+  transfer: 'Transferencia',
+  cash: 'Efectivo'
+};
+
+const paymentStatusColors: { [key: string]: string } = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  partial: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800'
+};
+
+const paymentStatusNames: { [key: string]: string } = {
+  pending: 'Pendiente',
+  partial: 'Depósito pagado',
+  completed: 'Completado'
 };
 
 export default function BookingsTable() {
@@ -46,6 +73,24 @@ export default function BookingsTable() {
       setBookings(updatedBookings);
       localStorage.setItem('bookings', JSON.stringify(updatedBookings));
     }
+  };
+
+  const handlePaymentComplete = (bookingId: string) => {
+    const updatedBookings = bookings.map(booking => {
+      if (booking.id === bookingId) {
+        return {
+          ...booking,
+          payment: {
+            ...booking.payment,
+            status: 'completed',
+            remainingAmount: 0,
+          },
+        };
+      }
+      return booking;
+    });
+    setBookings(updatedBookings);
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
   };
 
   const handleSort = (field: keyof Booking) => {
@@ -110,7 +155,7 @@ export default function BookingsTable() {
                   Servicios
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
+                  Pago
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
@@ -126,6 +171,7 @@ export default function BookingsTable() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{booking.name}</div>
+                    <div className="text-sm text-gray-500">{booking.email}</div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
@@ -138,8 +184,37 @@ export default function BookingsTable() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{booking.email}</div>
-                    <div className="text-sm text-gray-500">{booking.phone}</div>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2 py-1 text-xs rounded-full ${paymentStatusColors[booking.payment.status]}`}>
+                          {paymentStatusNames[booking.payment.status]}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {paymentMethodNames[booking.payment.method]}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Total:</span>
+                          <span className="font-medium">${booking.payment.totalAmount}</span>
+                        </div>
+                        {booking.payment.status !== 'completed' && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Pendiente:</span>
+                            <span className="font-medium">${booking.payment.remainingAmount}</span>
+                          </div>
+                        )}
+                      </div>
+                      {booking.payment.status === 'partial' && (
+                        <button
+                          onClick={() => handlePaymentComplete(booking.id)}
+                          className="flex items-center text-sm text-brand-brown hover:text-brand-dark"
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          Marcar como pagado
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <button
